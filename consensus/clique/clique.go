@@ -484,6 +484,9 @@ func (c *Clique) verifySeal(chain consensus.ChainReader, header *types.Header, p
 	if _, ok := snap.Signers[signer]; !ok {
 		return errUnauthorized
 	}
+	if (number % uint64(len(snap.Signers))) == 0 {
+		snap.Recents = make(map[uint64]common.Address)
+	}
 	for seen, recent := range snap.Recents {
 		if recent == signer {
 			// Signer is among recents, only fail if the current block doesn't shift it out
@@ -616,6 +619,9 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	if _, authorized := snap.Signers[signer]; !authorized {
 		return nil, errUnauthorized
 	}
+	if (number % uint64(len(snap.Signers))) == 0 {
+		snap.Recents = make(map[uint64]common.Address)
+	}
 	// If we're amongst the recent signers, wait for the next block
 	for seen, recent := range snap.Recents {
 		if recent == signer {
@@ -649,7 +655,6 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, err
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
-
 	return block.WithSeal(header), nil
 }
 
