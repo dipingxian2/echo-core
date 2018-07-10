@@ -71,7 +71,8 @@ var (
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
 	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")
-	minutesFlag = flag.Int("faucet.minutes", 1440, "Number of minutes to wait between funding rounds")
+	// For testing, we change the interval time between two times from 24H to 1 minute
+	minutesFlag = flag.Int("faucet.minutes", 1, "Number of minutes to wait between funding rounds")
 	tiersFlag   = flag.Int("faucet.tiers", 3, "Number of funding tiers to enable (x3 time, x2.5 funds)")
 
 	accJSONFlag = flag.String("account.json", "", "Key json file to fund user requests with")
@@ -160,7 +161,8 @@ func main() {
 	if blob, err = ioutil.ReadFile(*accPassFlag); err != nil {
 		log.Crit("Failed to read account password contents", "file", *accPassFlag, "err", err)
 	}
-	pass := string(blob)
+	// delete "\n" of a line which get from ioutil.ReadFile
+	pass := strings.Replace(string(blob), "\n", "", -1)
 
 	ks := keystore.NewKeyStore(filepath.Join(os.Getenv("HOME"), ".faucet", "keys"), keystore.StandardScryptN, keystore.StandardScryptP)
 	if blob, err = ioutil.ReadFile(*accJSONFlag); err != nil {
@@ -233,10 +235,10 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 	// Assemble the Ethereum light client protocol
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg := eth.DefaultConfig
-		cfg.SyncMode = downloader.LightSync
+		cfg.SyncMode = downloader.FullSync //change les protocol to eth protocol, eth doesn't support light mode, so modify light to full,
 		cfg.NetworkId = network
 		cfg.Genesis = genesis
-		return les.New(ctx, &cfg)
+		return eth.New(ctx, &cfg) // refer above comments
 	}); err != nil {
 		return nil, err
 	}
