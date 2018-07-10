@@ -304,7 +304,7 @@ func (s *Snapshot) signers() []common.Address {
 // inturn returns if a signer at a given block height is in-turn or not.
 func (s *Snapshot) inturn(number uint64, signer common.Address) bool {
 	signers, offset := s.signers(), 0
-	rand.Seed(int64(number))
+	rand.Seed(int64(number) / int64(len(signers)))
 	randNumList := rand.Perm(len(signers))
 	tmpSigners := make([]common.Address, 0, len(signers))
 	for i := 0; i < len(randNumList); i++ {
