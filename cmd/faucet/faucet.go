@@ -72,7 +72,7 @@ var (
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
 	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")
 	// For testing, we change the interval time between two times from 24H to 1 minute
-	minutesFlag = flag.Int("faucet.minutes", 1, "Number of minutes to wait between funding rounds")
+	minutesFlag = flag.Int("faucet.minutes", 120, "Number of minutes to wait between funding rounds")
 	tiersFlag   = flag.Int("faucet.tiers", 3, "Number of funding tiers to enable (x3 time, x2.5 funds)")
 
 	accJSONFlag = flag.String("account.json", "", "Key json file to fund user requests with")
