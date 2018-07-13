@@ -83,7 +83,7 @@ func faucetHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "faucet.html", size: 11727, mode: os.FileMode(420), modTime: time.Unix(1531396415, 0)}
+	info := bindataFileInfo{name: "faucet.html", size: 11727, mode: os.FileMode(420), modTime: time.Unix(1531448117, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
