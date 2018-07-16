@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package clique
+package epoa
 
 import (
 	"bytes"
 	"encoding/json"
+	"math/rand"
 
 	"github.com/echochain/echo-core/common"
 	"github.com/echochain/echo-core/core/types"
@@ -45,8 +46,8 @@ type Tally struct {
 
 // Snapshot is the state of the authorization voting at a given point in time.
 type Snapshot struct {
-	config   *params.CliqueConfig // Consensus engine parameters to fine tune behavior
-	sigcache *lru.ARCCache        // Cache of recent block signatures to speed up ecrecover
+	config   *params.EpoaConfig // Consensus engine parameters to fine tune behavior
+	sigcache *lru.ARCCache      // Cache of recent block signatures to speed up ecrecover
 
 	Number  uint64                      `json:"number"`  // Block number where the snapshot was created
 	Hash    common.Hash                 `json:"hash"`    // Block hash where the snapshot was created
@@ -59,7 +60,7 @@ type Snapshot struct {
 // newSnapshot creates a new snapshot with the specified startup parameters. This
 // method does not initialize the set of recent signers, so only ever use if for
 // the genesis block.
-func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signers []common.Address) *Snapshot {
+func newSnapshot(config *params.EpoaConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signers []common.Address) *Snapshot {
 	snap := &Snapshot{
 		config:   config,
 		sigcache: sigcache,
@@ -76,8 +77,8 @@ func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uin
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-	blob, err := db.Get(append([]byte("clique-"), hash[:]...))
+func loadSnapshot(config *params.EpoaConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+	blob, err := db.Get(append([]byte("epoa-"), hash[:]...))
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func (s *Snapshot) store(db ethdb.Database) error {
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte("clique-"), s.Hash[:]...), blob)
+	return db.Put(append([]byte("epoa-"), s.Hash[:]...), blob)
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.
@@ -303,7 +304,14 @@ func (s *Snapshot) signers() []common.Address {
 // inturn returns if a signer at a given block height is in-turn or not.
 func (s *Snapshot) inturn(number uint64, signer common.Address) bool {
 	signers, offset := s.signers(), 0
-	for offset < len(signers) && signers[offset] != signer {
+	rand.Seed(int64(number) / int64(len(signers)))
+	randNumList := rand.Perm(len(signers))
+	tmpSigners := make([]common.Address, 0, len(signers))
+	for i := 0; i < len(randNumList); i++ {
+		tmpSigners = append(tmpSigners, signers[randNumList[i]])
+	}
+
+	for offset < len(tmpSigners) && tmpSigners[offset] != signer {
 		offset++
 	}
 	return (number % uint64(len(signers))) == uint64(offset)

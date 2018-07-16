@@ -30,6 +30,7 @@ import (
 	"github.com/echochain/echo-core/common/hexutil"
 	"github.com/echochain/echo-core/consensus"
 	"github.com/echochain/echo-core/consensus/clique"
+	"github.com/echochain/echo-core/consensus/epoa"
 	"github.com/echochain/echo-core/consensus/ethash"
 	"github.com/echochain/echo-core/core"
 	"github.com/echochain/echo-core/core/bloombits"
@@ -211,8 +212,12 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *ethash.Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
+	if chainConfig.Clique != nil && chainConfig.Epoa == nil {
 		return clique.New(chainConfig.Clique, db)
+	}
+
+	if chainConfig.Clique == nil && chainConfig.Epoa != nil {
+		return epoa.New(chainConfig.Epoa, db)
 	}
 	// Otherwise assume proof-of-work
 	switch config.PowMode {
@@ -346,6 +351,16 @@ func (s *Ethereum) StartMining(local bool) error {
 		}
 		clique.Authorize(eb, wallet.SignHash)
 	}
+
+	if epoa, ok := s.engine.(*epoa.Epoa); ok {
+		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
+		epoa.Authorize(eb, wallet.SignHash)
+	}
+
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
